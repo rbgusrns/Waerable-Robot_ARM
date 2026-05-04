@@ -83,19 +83,22 @@ static DxlPresentPosition *Dxl_FindPositionSlot(uint8_t id)
   return NULL;
 }
 
-static DxlStatus Dxl_ValidateGoalPosition(uint8_t id, uint16_t goal_position)
+static uint16_t Dxl_SaturateGoalPosition(uint8_t id, uint16_t goal_position)
 {
   const DxlServoConfig *config = Dxl_FindConfig(id);
 
   if (config == NULL) {
-    return DXL_STATUS_BAD_PARAM;
+    return goal_position;
   }
 
-  if ((goal_position < config->min_position) || (goal_position > config->max_position)) {
-    return DXL_STATUS_RANGE;
+  if (goal_position < config->min_position) {
+    return config->min_position;
+  }
+  if (goal_position > config->max_position) {
+    return config->max_position;
   }
 
-  return DXL_STATUS_OK;
+  return goal_position;
 }
 
 static DxlStatus Dxl_SetDirectionTx(void)
@@ -571,15 +574,13 @@ DxlStatus Dxl_SetGoalPositionSafe(uint8_t id, uint16_t goal_position)
   const DxlServoConfig *config = Dxl_FindConfig(id);
   uint8_t attempt;
   DxlStatus status;
+  uint16_t safe_goal;
 
   if (config == NULL) {
     return DXL_STATUS_BAD_PARAM;
   }
 
-  status = Dxl_ValidateGoalPosition(id, goal_position);
-  if (status != DXL_STATUS_OK) {
-    return status;
-  }
+  safe_goal = Dxl_SaturateGoalPosition(id, goal_position);
 
   for (attempt = 0U; attempt < DXL_WRITE_VERIFY_RETRIES; ++attempt) {
     uint16_t verified_goal = 0U;
@@ -599,7 +600,7 @@ DxlStatus Dxl_SetGoalPositionSafe(uint8_t id, uint16_t goal_position)
 
     HAL_Delay(DXL_WRITE_SETTLE_MS);
 
-    status = Dxl_WriteWord(id, DXL_ADDR_GOAL_POSITION, goal_position);
+    status = Dxl_WriteWord(id, DXL_ADDR_GOAL_POSITION, safe_goal);
     if (status != DXL_STATUS_OK) {
       return status;
     }
@@ -607,7 +608,7 @@ DxlStatus Dxl_SetGoalPositionSafe(uint8_t id, uint16_t goal_position)
     HAL_Delay(DXL_WRITE_SETTLE_MS);
 
     status = Dxl_ReadGoalPosition(id, &verified_goal, &status_error);
-    if ((status == DXL_STATUS_OK) && (verified_goal == goal_position)) {
+    if ((status == DXL_STATUS_OK) && (verified_goal == safe_goal)) {
       return DXL_STATUS_OK;
     }
 
@@ -621,20 +622,18 @@ DxlStatus Dxl_MoveArmSafe(const uint16_t goal_positions[DXL_SERVO_COUNT])
 {
   uint8_t index;
   DxlStatus status;
+  uint16_t safe_goals[DXL_SERVO_COUNT];
 
   if (goal_positions == NULL) {
     return DXL_STATUS_BAD_PARAM;
   }
 
   for (index = 0U; index < DXL_SERVO_COUNT; ++index) {
-    status = Dxl_ValidateGoalPosition(g_dxl_servo_configs[index].id, goal_positions[index]);
-    if (status != DXL_STATUS_OK) {
-      return status;
-    }
+    safe_goals[index] = Dxl_SaturateGoalPosition(g_dxl_servo_configs[index].id, goal_positions[index]);
   }
 
   for (index = 0U; index < DXL_SERVO_COUNT; ++index) {
-    status = Dxl_SetGoalPositionSafe(g_dxl_servo_configs[index].id, goal_positions[index]);
+    status = Dxl_SetGoalPositionSafe(g_dxl_servo_configs[index].id, safe_goals[index]);
     if (status != DXL_STATUS_OK) {
       return status;
     }
