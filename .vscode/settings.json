@@ -1,0 +1,9 @@
+{
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": false,
+  "cmake.buildDirectory": "${workspaceFolder}/build/${buildType}",
+  "cortex-debug.variableUseNaturalFormat": false,
+  "files.associations": {
+    "stm32g4xx_hal_conf.h": "c"
+  }
+}

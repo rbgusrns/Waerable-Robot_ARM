@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "RobotARM Debug (ST-LINK GDB Server)",
+      "type": "cortex-debug",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/Debug/RobotARM.elf",
+      "servertype": "external",
+      "gdbTarget": "localhost:61234",
+      "device": "STM32G474VE",
+      "interface": "swd",
+      "runToEntryPoint": "main",
+      "env": {
+        "STM32CubeCLT_ROOT": "C:\\ST\\STM32CubeCLT_1.21.0"
+      },
+      "armToolchainPath": "${env:STM32CubeCLT_ROOT}/GNU-tools-for-STM32/bin",
+      "gdbPath": "${env:STM32CubeCLT_ROOT}/GNU-tools-for-STM32/bin/arm-none-eabi-gdb.exe",
+      "preLaunchTask": "debug: prepare",
+      "postDebugTask": "stlink-gdbserver:stop"
+    }
+  ]
+}

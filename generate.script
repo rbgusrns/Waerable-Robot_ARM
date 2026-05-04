@@ -1,0 +1,3 @@
+config load c:\STproject\RobotARM\RobotARM.ioc
+project generate
+exit

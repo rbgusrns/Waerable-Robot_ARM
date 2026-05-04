@@ -1,0 +1,121 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "cmake: configure",
+      "type": "shell",
+      "command": "${env:STM32CubeCLT_ROOT}\\CMake\\bin\\cmake.exe",
+      "args": [
+        "--preset",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "STM32CubeCLT_ROOT": "C:\\ST\\STM32CubeCLT_1.21.0"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "cmake: build",
+      "type": "shell",
+      "command": "${env:STM32CubeCLT_ROOT}\\CMake\\bin\\cmake.exe",
+      "args": [
+        "--build",
+        "--preset",
+        "Debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "STM32CubeCLT_ROOT": "C:\\ST\\STM32CubeCLT_1.21.0"
+        }
+      },
+      "dependsOn": "cmake: configure",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "flash: stlink",
+      "type": "shell",
+      "command": "${env:STM32CubeCLT_ROOT}\\STM32CubeProgrammer\\bin\\STM32_Programmer_CLI.exe",
+      "args": [
+        "-c",
+        "port=SWD",
+        "mode=UR",
+        "reset=HWrst",
+        "-w",
+        "${workspaceFolder}\\build\\Debug\\RobotARM.hex",
+        "-v",
+        "-rst"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": {
+          "STM32CubeCLT_ROOT": "C:\\ST\\STM32CubeCLT_1.21.0"
+        }
+      },
+      "dependsOn": "cmake: build",
+      "problemMatcher": []
+    },
+    {
+      "label": "build + flash",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "flash: stlink"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "stlink-gdbserver:start",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "$server='${env:STM32CubeCLT_ROOT}\\STLink-gdb-server\\bin\\ST-LINK_gdbserver.exe'; $cubeprog='${env:STM32CubeCLT_ROOT}\\STM32CubeProgrammer\\bin'; Get-Process ST-LINK_gdbserver -ErrorAction SilentlyContinue | Stop-Process -Force; Start-Process -FilePath $server -ArgumentList @('-p','61234','-cp',$cubeprog,'-d') -WindowStyle Hidden; $deadline=(Get-Date).AddSeconds(10); while((Get-Date) -lt $deadline){ try { $client = New-Object System.Net.Sockets.TcpClient; $client.Connect('127.0.0.1', 61234); $client.Dispose(); exit 0 } catch { Start-Sleep -Milliseconds 250 } }; throw 'ST-LINK GDB server did not open port 61234 in time.'"
+      ],
+      "options": {
+        "env": {
+          "STM32CubeCLT_ROOT": "C:\\ST\\STM32CubeCLT_1.21.0"
+        }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "debug: prepare",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "cmake: build",
+        "stlink-gdbserver:start"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "stlink-gdbserver:stop",
+      "type": "shell",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        "Get-Process ST-LINK_gdbserver -ErrorAction SilentlyContinue | Stop-Process -Force"
+      ],
+      "options": {
+        "env": {
+          "STM32CubeCLT_ROOT": "C:\\ST\\STM32CubeCLT_1.21.0"
+        }
+      },
+      "problemMatcher": []
+    }
+  ]
+}
